@@ -6,8 +6,8 @@
 //  Copyright © 2018 Mayckon Barbosa da Silva. All rights reserved.
 //
 
-import UIKit
 import LocalAuthentication
+import UIKit
 
 public enum KindBiometrics: String {
     case touchID = "Touch ID"
@@ -32,13 +32,18 @@ public protocol MBSPasswordDelegate: class {
 }
 
 public class MBSPasswordView: UIView, MBSPasswordViewType {
-    
-    @IBOutlet public weak var topView: MBSTopPasswordView!
-    @IBOutlet public weak var bodyView: MBSBodyPasswordView!
-    
-    weak public var delegate: MBSPasswordDelegate!
-    
+    @IBOutlet public var imgtop: UIImageView!
+    @IBOutlet public var topView: MBSTopPasswordView!
+    @IBOutlet public var ViewContent: UIView!
+    @IBOutlet public var img1: UIImageView!
+    @IBOutlet public var bodyView: MBSBodyPasswordView!
+    @IBOutlet public var btndelete: MBSButton!
+    @IBOutlet public var IMG: UIImageView!
+    public weak var delegate: MBSPasswordDelegate!
+    public var isAttemptsLimitReached = false
+
     // MARK: - MBSPasswordViewType protocol vars
+
     public var isShakable: Bool = true
     public var titleToRequestAuthentication: String = "Identify yourself!"
     public static var isBiometricsActivate: Bool {
@@ -58,24 +63,25 @@ public class MBSPasswordView: UIView, MBSPasswordViewType {
     internal var view: UIView!
     internal var enableBiometricsAuthentication: Bool = false
     
-    private var count = 120
+    private var count = 15
     private var timer: Timer!
     private var isTimerRunning = false
     private var topViewTitle = ""
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier?
     
-    public override init(frame: CGRect) {
+    override public init(frame: CGRect) {
         super.init(frame: frame)
         loadNib()
         commonInit()
     }
+
     public required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         loadNib()
         commonInit()
     }
     
-    private func loadNib() {
+    public func loadNib() {
         // load and instantantiate xib
         let bundle = Bundle(for: type(of: self))
         let nib = UINib(nibName: String(describing: type(of: self)), bundle: bundle)
@@ -84,28 +90,29 @@ public class MBSPasswordView: UIView, MBSPasswordViewType {
         view.frame = bounds
         view.autoresizingMask = [.flexibleHeight, .flexibleWidth]
         // add on view
-        self.addSubview(view)
+        addSubview(view)
         self.view = view
     }
     
-    private func commonInit() {
+    public func commonInit() {
         topView.delegate = self
-        topView.passwordRegistered = self.passwordRegistered()
+        topView.passwordRegistered = passwordRegistered()
         bodyView.delegate = self
-        disableViews()
+//        disableViews()
     }
     
-    private func disableViews() {
+    public func disableViews() {
         topView.isUserInteractionEnabled = false
         bodyView.isUserInteractionEnabled = false
     }
     
-    private func enableViews() {
+    public func enableViews() {
         topView.isUserInteractionEnabled = true
         bodyView.isUserInteractionEnabled = true
     }
     
     // MARK: - MBSPasswordViewType protocol methods
+
     public func start(enableBiometrics: Bool) {
         checkIfRunningDisableState()
         enableBiometricsAuthentication = enableBiometrics
@@ -115,7 +122,7 @@ public class MBSPasswordView: UIView, MBSPasswordViewType {
     }
     
     public func changeExistingPassword() {
-        self.topView.changeExistingPassword = true
+        topView.changeExistingPassword = true
     }
     
     public static func deviceBiometricsKind() -> KindBiometrics {
@@ -132,14 +139,18 @@ public class MBSPasswordView: UIView, MBSPasswordViewType {
 }
 
 // MARK: - Protocols to support MBSTopPasswordView
+
 extension MBSPasswordView: MBSTopPasswordDelegate, Shakable {
+    public func resetbg() {
+    }
+    
     public func invalidMatch(_ result: InvalidPasswordResult) {
         delegate?.wrongPassword(result)
         shakeView()
         disableStateIfNeeded()
     }
     
-   public func password(_ result: [String]) {
+    public func password(_ result: [String]) {
         registerPassword(result)
         disableViews()
         authenticateUser(result)
@@ -153,9 +164,10 @@ extension MBSPasswordView: MBSTopPasswordDelegate, Shakable {
 }
 
 // MARK: - Disable and Enable View State
+
 extension MBSPasswordView {
     // limit is 2
-    func isLimitAttemptsOut() -> Bool {
+    public func isLimitAttemptsOut() -> Bool {
         let userDefaults = UserDefaults()
         if let quantity = userDefaults.object(forKey: MBSAttempts.quantity.rawValue) as? Int {
             let newQuantity = quantity - 1
@@ -163,21 +175,23 @@ extension MBSPasswordView {
             userDefaults.synchronize()
             return newQuantity == 0
         } else {
-           userDefaults.set(2, forKey: MBSAttempts.quantity.rawValue)
-           userDefaults.synchronize()
-           return false
+            userDefaults.set(2, forKey: MBSAttempts.quantity.rawValue)
+            userDefaults.synchronize()
+            return false
         }
     }
     
     private func disableStateIfNeeded() {
         if isLimitAttemptsOut() {
-            registerMinutesCount()
-            disableState()
+            isAttemptsLimitReached = true
+            // Hiển thị thông báo
+//            registerMinutesCount()
+//            disableState()
         }
     }
     
-    private func disableState() {
-        alpha = 0.7
+    public func disableState() {
+        alpha = 0.8
         disableViews()
         runTimer()
     }
@@ -209,7 +223,7 @@ extension MBSPasswordView {
     
     private func registerQuantityCount() {
         let userDefaults = UserDefaults()
-        userDefaults.set(3, forKey: MBSAttempts.quantity.rawValue)
+        userDefaults.set(2, forKey: MBSAttempts.quantity.rawValue)
         userDefaults.synchronize()
     }
     
@@ -217,7 +231,7 @@ extension MBSPasswordView {
         backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(expirationHandler: {
             UIApplication.shared.endBackgroundTask(self.backgroundTaskIdentifier!)
         })
-        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: (#selector(self.updateTimer)), userInfo: nil, repeats: true)
+        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(updateTimer), userInfo: nil, repeats: true)
     }
     
     @objc private func updateTimer() {
@@ -227,7 +241,7 @@ extension MBSPasswordView {
     }
     
     private func resetCount() {
-        count = 120
+        count = 15
     }
     
     private func enableState() {
@@ -236,7 +250,7 @@ extension MBSPasswordView {
     }
     
     private func runCountDown() {
-        if(count > 0) {
+        if count > 0 {
             let minutes = String(count / 60)
             let seconds = String(count % 60)
             let secondsFormatted = Int(seconds)! < 10 ? "0\(seconds)" : seconds
@@ -259,28 +273,31 @@ extension MBSPasswordView {
 }
 
 // MARK: - Protocols to support MBSBodyPasswordView
+
 extension MBSPasswordView: MBSBodyPasswordDelegate {
-   public func selected(_ value: String) {
+    public func selected(_ value: String) {
         topView.insert(value)
     }
-   public func removeLast() {
+
+    public func removeLast() {
         topView.removeLast()
     }
 }
 
 // MARK: - Flag the authentication
-extension MBSPasswordView {
+
+public extension MBSPasswordView {
     private func registerPassword(_ password: [String]) {
         let userDefaults = UserDefaults()
         userDefaults.set(password, forKey: MBSUserAuthetication.done.rawValue)
     }
     
-    private func passwordRegistered() -> [String]? {
+    func passwordRegistered() -> [String]? {
         let userDefaults = UserDefaults()
         return userDefaults.value(forKey: MBSUserAuthetication.done.rawValue) as? [String]
     }
     
-    static public func cleanPasswordUserDefaults() {
+    static func cleanPasswordUserDefaults() {
         let userDefaults = UserDefaults()
         if let _ = userDefaults.value(forKey: MBSUserAuthetication.done.rawValue) as? [String] {
             userDefaults.removeObject(forKey: MBSUserAuthetication.done.rawValue)
@@ -290,10 +307,11 @@ extension MBSPasswordView {
 }
 
 // MARK: - Request Authentication
+
 extension MBSPasswordView: MBSAuthenticatable {
     private func callBiometricsIfEnabled(_ password: [String]) {
         if enableBiometricsAuthentication {
-            self.authenticateByBiometrics(title: titleToRequestAuthentication) { result in
+            authenticateByBiometrics(title: titleToRequestAuthentication) { result in
                 switch result {
                 case .success:
                     self.delegate?.passwordFromBiometrics(MBSPasswordResult.success(password))
@@ -309,7 +327,7 @@ extension MBSPasswordView: MBSAuthenticatable {
     
     private func authenticateUser(_ password: [String]) {
         if enableBiometricsAuthentication {
-            self.authenticateByBiometrics(title: titleToRequestAuthentication) { result in
+            authenticateByBiometrics(title: titleToRequestAuthentication) { result in
                 switch result {
                 case .success:
                     self.delegate?.passwordFromBiometrics(MBSPasswordResult.success(password))
@@ -335,6 +353,3 @@ extension MBSPasswordView: MBSAuthenticatable {
         }
     }
 }
-
-
-

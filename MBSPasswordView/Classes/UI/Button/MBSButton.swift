@@ -7,29 +7,42 @@
 //
 
 import UIKit
+ 
+public class MBSButton: UIButton {
+    var textColor: UIColor = .white
+    var customBackgroundColor: UIColor = .init(hex: "ffffff").withAlphaComponent(0.1)
+    var customBordercolor: UIColor? = .clear
+    private var container: UIView?
 
-class MBSButton: UIButton {
-    
-    var textColor: UIColor = .flatDarkBlue
-    var customBackgroundColor: UIColor = .white
-    
-    override var isHighlighted: Bool {
-        didSet {
-            setTitleColor(customBackgroundColor, for: .highlighted)
-            backgroundColor = isHighlighted ? textColor : customBackgroundColor
-        }
+    override public func draw(_ rect: CGRect) {
+        // provide custom style
+        layer.cornerRadius = frame.width / 2
+        clipsToBounds = true
     }
-    
-    override func draw(_ rect: CGRect) {
-        //provide custom style
-        self.layer.cornerRadius = self.frame.width / 2
-        self.clipsToBounds = true
-    }
-    
-    override func layoutSubviews() {
+
+    override public func layoutSubviews() {
         super.layoutSubviews()
-        self.backgroundColor = customBackgroundColor
-        self.setTitleColor(textColor, for: .normal)
-        self.layer.borderColor = customBackgroundColor.cgColor
+        setTitleColor(textColor, for: .normal)
+        setTitleColor(UIColor.black, for: .highlighted)
+        backgroundColor = isHighlighted ? textColor : customBackgroundColor
+        layer.borderWidth = 0.5
+        layer.borderColor = customBordercolor?.cgColor
+    }
+}
+
+extension UIColor {
+    convenience init(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+
+        var rgb: UInt64 = 0
+
+        Scanner(string: hexSanitized).scanHexInt64(&rgb)
+
+        let red = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
+        let green = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
+        let blue = CGFloat(rgb & 0x0000FF) / 255.0
+
+        self.init(red: red, green: green, blue: blue, alpha: 1.0)
     }
 }
